@@ -2,8 +2,14 @@
 
 
 <!-- CODE FOR TEXT BOX GOES HERE -->
+    <form method="POST" action="/results">
+    <label for="text">Enter words here: </label><br>
+    <textarea name="text" id="text"></textarea><br>
+    <input type="submit">
+    </form>
 
-  <h1>Autocorrect</h1>
+
 
 </#assign>
+
 <#include "main.ftl">

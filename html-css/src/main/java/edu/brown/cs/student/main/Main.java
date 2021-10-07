@@ -1,12 +1,17 @@
 package edu.brown.cs.student.main;
 
+import com.google.common.collect.ImmutableMap;
 import freemarker.template.Configuration;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import spark.ExceptionHandler;
+import spark.ModelAndView;
+import spark.QueryParamsMap;
 import spark.Request;
 import spark.Response;
+import spark.Spark;
+import spark.TemplateViewRoute;
 import spark.template.freemarker.FreeMarkerEngine;
 
 import java.io.BufferedReader;
@@ -15,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -24,6 +30,7 @@ public final class Main {
 
   private static final int DEFAULT_PORT = 4567;
   private static Autocorrector ac;
+
 
   /**
    * The initial method called when execution begins.
@@ -114,8 +121,47 @@ public final class Main {
    * * IMPLEMENT METHOD runSparkServer() HERE
    */
   private void runSparkServer(int port) {
-    // TODO
+    Spark.port(port);
+    Spark.externalStaticFileLocation("src/main/resources/static");
+
+    Spark.exception(Exception.class, new ExceptionPrinter());
+    FreeMarkerEngine freeMarker = createEngine();
+
+    Spark.get("/autocorrect", new AutocorrectHandler(), freeMarker);
+
+    System.out.println("Got past the get");
+
+    Spark.post("/results", new SubmitHandler(), freeMarker);
+
+    System.out.println("Got past the post"); //This prints
+
   }
+
+  private static class SubmitHandler implements TemplateViewRoute {
+    public ModelAndView handle(Request req, Response response) {
+      //System.out.println("In the SubmitHandler");
+      QueryParamsMap qm = req.queryMap();
+      String textFromTextField = qm.value("text");
+      String[] words = textFromTextField.split(" ");
+      String suggestionString = "";
+      for (String word : words) {
+        Set<String> singleWordSuggestions = ac.suggest(word);
+        for (String singleSuggestion : singleWordSuggestions) {
+          suggestionString += singleSuggestion + " ";
+        }
+      }
+      Map<String, String> variables = ImmutableMap.of("title", "AutocorrectResults", "suggestions", suggestionString);
+      return new ModelAndView(variables, "autocorrect.ftl");
+    }
+  }
+
+  private static class AutocorrectHandler implements TemplateViewRoute {
+    public ModelAndView handle(Request request, Response response) {
+      Map<String, String> variables = ImmutableMap.of("title", "AutocorrectWebsite", "suggestions", "");
+      return new ModelAndView(variables, "autocorrect.ftl");
+    }
+  }
+
 
   /**
    * Display an error page when an exception occurs in the server.
